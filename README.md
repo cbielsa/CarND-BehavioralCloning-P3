@@ -86,14 +86,14 @@ Architectural details:
 > 
 > lambda_1 (Lambda)                (None, 32, 120, 3)    0          lambda_input_1[0][0]
 > 
->  convolution2d_1 (Convolution2D)	(None, 29, 117, 12)   		588         lambda_1[0][0]
->  activation_1 (Activation)       (None, 29, 117, 12)   		0           convolution2d_1[0][0]          
-> maxpooling2d_1 (MaxPooling2D)    (None, 14, 58, 12)    		0           activation_1[0][0]
+> convolution2d_1 (Convolution2D)	(None, 29, 117, 12)   	588         lambda_1[0][0]            
+> activation_1 (Activation)       (None, 29, 117, 12)   		0           convolution2d_1[0][0]            
+> maxpooling2d_1 (MaxPooling2D)    (None, 14, 58, 12)    		0           activation_1[0][0]            
 > 
->  convolution2d_2 (Convolution2D)  (None, 11, 55, 18)    3474        maxpooling2d_1[0][0]
->  activation_2 (Activation)       (None, 11, 55, 18)    0           convolution2d_2[0][0]            
+> convolution2d_2 (Convolution2D)  (None, 11, 55, 18)    3474        maxpooling2d_1[0][0]            
+> activation_2 (Activation)       (None, 11, 55, 18)    0           convolution2d_2[0][0]                        
 > 
-> spatialdropout2d_1 (SpatialDropo (None, 11, 55, 18)    0         activation_2[0][0]
+> spatialdropout2d_1 (SpatialDropo (None, 11, 55, 18)    0         activation_2[0][0]            
 >  convolution2d_3 (Convolution2D) (None, 9, 53, 24)     3912        spatialdropout2d_1[0][0]         
 > activation_3 (Activation)        (None, 9, 53, 24)     0  convolution2d_3[0][0]           
 > maxpooling2d_2 (MaxPooling2D)   (None, 4, 26, 24)     0           activation_3[0][0]               
