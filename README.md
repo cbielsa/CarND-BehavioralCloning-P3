@@ -6,7 +6,7 @@ The objective of the project is to write SW for a car to drive autonomously in t
 Control signals to the simulator include throttle and steering angle.
 
 
-DESCRIPTION OF FILES IN THE REPOSITORY
+**DESCRIPTION OF FILES IN THE REPOSITORY**
 
   - model.ipynb contains data exploration, pre-processing, split in training and validation sets, data augmentation functions, and deep learning model construction, training and evaluation.
   - model.py is a python script version of model.ipynb, but without data exploration, image and plot display.
@@ -18,7 +18,7 @@ DESCRIPTION OF FILES IN THE REPOSITORY
   - The car simulator executable was implemented by Udacity.com and is not part of this repository.
 
 
-APPROACH
+**APPROACH**
 
 For the throttle control signal, I implement a PID controller in "drive.py" that mantains speed at 20.
 The integral component is needed to fully compensate for drag and resistance forces in the simulator.
@@ -29,7 +29,7 @@ For the steering control signal, I train a Convolutional Neural Network with aug
 On the remainder of this document, I explain the approach to data collection, preprocessing, split and augmentation, the model architecture and the approach to weight learning and model testing for the steering control signal.
 
 
-DATA COLLECTION
+**DATA COLLECTION**
 
 For steering control signals, I adopt an end-to-end approach with a deep convolutional neural network that takes as input images from a frontal camera and provides as output a real scalar value that corresponds to the steering angle. Note that the CNN implicitly solves the feature detection, path planning and control problems. This approach is very similar to that adopted by NVIDIA with actual cars in https://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf 
 
@@ -38,9 +38,10 @@ To collect pairs of images and steering angles, I drive several laps in circuit 
 A total of 41,448 160x320 RGB images is collected: 25,376 with the central camera, 8,036 with the left camera and 8,036 with the right camera.
 
 
-DATA PRE-PROCESSING AND SPLIT
+**DATA PRE-PROCESSING AND SPLIT**
 
 For each image, the following pre-processing is done:
+
   - The 55 top pixel rows and the 20 bottom rows are cropped out. This has three distinct benefits: i) have the model focus on the features that matter most for learning steering angle, ii) reduce training and inference computation times, as well as memory requirements, and iii) completely remove the body car from the image, which will allow me to simulate car shifts across the road by horizontally shifting image pixels for data augmentation.
   - The image is resized to 32x120 pixels, again to reduce computational and memory requirements, as well as number of weights in the model.
   - Pixel intensities are converted to float32.
@@ -49,9 +50,10 @@ For each image, the following pre-processing is done:
 The pre-processed dataset is randomly split in 80% training set and 20% validation set.
 
 
-DATA AUGMENTATION
+**DATA AUGMENTATION**
 
 In order for a model trained on data from a single (training) circuit to be able to drive on a second (test) circuit not seen before, extensive data augmentation is required. Limitations of data collected in the training circuit include:
+  
   - Most curves on the circuit are left curves (this bias was already taken care by driving the circuit also in reverse direction).
   - The circuit road is pretty much flat.
   - The road signaling is made of yellow lane lines, white-and-red strippes and the walls of a bridge, but never seen circuits may have different signaling features.
@@ -59,6 +61,7 @@ In order for a model trained on data from a single (training) circuit to be able
   - Illumination conditions are excellent, and there is lot's of light.
   
 To bette generalize the dataset, each example in the original dataset, is subject to the following random ransformations:
+  
   - 50% of the images are vertically flipped. If an image is flipped, the steering angle sign is changed.
   - Image is converted to HSV and color channels are randomly modified. This simulates darker scenarios, as well as different color tones.
   - Random shadowed regions are introduced in 50% of the images. Two image points are randomly picked, a line is defined connecting the points, and the region to one side of the line is darkened with a random value.
@@ -68,7 +71,7 @@ To bette generalize the dataset, each example in the original dataset, is subjec
 Augmented data is generated at training time with a Python generator and Keras "fit_generator" functionality.
 
 
-MODEL ARCHITECTURE
+**MODEL ARCHITECTURE**
 
 The model employed is a Convolutional Neural Network with a normalization layer, followed by 4 convolutional layers and three fully connected layers, the last one being a 1-unit layer representing the steering angle. The model has about 65k parameters. Dropout is employed together with early termination to prevent overfitting.
 
@@ -79,50 +82,38 @@ The model employed is a Convolutional Neural Network with a normalization layer,
 
 Architectural details:
 
-Layer (type)                     Output Shape          Param #     Connected to                     
-====================================================================================================
-lambda_1 (Lambda)                (None, 32, 120, 3)    0           lambda_input_1[0][0]             
-____________________________________________________________________________________________________
-convolution2d_1 (Convolution2D)  (None, 29, 117, 12)   588         lambda_1[0][0]                   
-____________________________________________________________________________________________________
-activation_1 (Activation)        (None, 29, 117, 12)   0           convolution2d_1[0][0]            
-____________________________________________________________________________________________________
-maxpooling2d_1 (MaxPooling2D)    (None, 14, 58, 12)    0           activation_1[0][0]               
-____________________________________________________________________________________________________
-convolution2d_2 (Convolution2D)  (None, 11, 55, 18)    3474        maxpooling2d_1[0][0]             
-____________________________________________________________________________________________________
-activation_2 (Activation)        (None, 11, 55, 18)    0           convolution2d_2[0][0]            
-____________________________________________________________________________________________________
-spatialdropout2d_1 (SpatialDropo (None, 11, 55, 18)    0           activation_2[0][0]               
-____________________________________________________________________________________________________
-convolution2d_3 (Convolution2D)  (None, 9, 53, 24)     3912        spatialdropout2d_1[0][0]         
-____________________________________________________________________________________________________
-activation_3 (Activation)        (None, 9, 53, 24)     0           convolution2d_3[0][0]            
-____________________________________________________________________________________________________
-maxpooling2d_2 (MaxPooling2D)    (None, 4, 26, 24)     0           activation_3[0][0]               
-____________________________________________________________________________________________________
-dropout_1 (Dropout)              (None, 4, 26, 24)     0           maxpooling2d_2[0][0]             
-____________________________________________________________________________________________________
-convolution2d_4 (Convolution2D)  (None, 2, 24, 32)     6944        dropout_1[0][0]                  
-____________________________________________________________________________________________________
-activation_4 (Activation)        (None, 2, 24, 32)     0           convolution2d_4[0][0]            
-____________________________________________________________________________________________________
-dropout_2 (Dropout)              (None, 2, 24, 32)     0           activation_4[0][0]               
-____________________________________________________________________________________________________
-flatten_1 (Flatten)              (None, 1536)          0           dropout_2[0][0]                  
-____________________________________________________________________________________________________
-dense_1 (Dense)                  (None, 32)            49184       flatten_1[0][0]                  
-____________________________________________________________________________________________________
-dense_2 (Dense)                  (None, 12)            396         dense_1[0][0]                    
-____________________________________________________________________________________________________
-dense_3 (Dense)                  (None, 1)             13          dense_2[0][0]                    
-====================================================================================================
-Total params: 64,511
-Trainable params: 64,511
-Non-trainable params: 0
+> Layer (type) /    Output Shape /    Param # /     Connected to
+> 
+> lambda_1 (Lambda)                (None, 32, 120, 3)    0          lambda_input_1[0][0]
+> 
+>  convolution2d_1 (Convolution2D)	(None, 29, 117, 12)   		588         lambda_1[0][0]
+>  activation_1 (Activation)       (None, 29, 117, 12)   		0           convolution2d_1[0][0]          
+> maxpooling2d_1 (MaxPooling2D)    (None, 14, 58, 12)    		0           activation_1[0][0]
+> 
+>  convolution2d_2 (Convolution2D)  (None, 11, 55, 18)    3474        maxpooling2d_1[0][0]
+>  activation_2 (Activation)       (None, 11, 55, 18)    0           convolution2d_2[0][0]            
+> 
+> spatialdropout2d_1 (SpatialDropo (None, 11, 55, 18)    0         activation_2[0][0]
+>  convolution2d_3 (Convolution2D) (None, 9, 53, 24)     3912        spatialdropout2d_1[0][0]         
+> activation_3 (Activation)        (None, 9, 53, 24)     0  convolution2d_3[0][0]           
+> maxpooling2d_2 (MaxPooling2D)   (None, 4, 26, 24)     0           activation_3[0][0]               
+> 
+> dropout_1 (Dropout)              (None, 4, 26, 24)     0   maxpooling2d_2[0][0]             
+> convolution2d_4 (Convolution2D)  (None, 2, 24, 32)     6944       dropout_1[0][0]                   
+> activation_4 (Activation)       (None, 2, 24, 32)     0           convolution2d_4[0][0] 
+>            
+> dropout_2 (Dropout)              (None, 2, 24, 32)     0          activation_4[0][0]               
+> flatten_1 (Flatten)              (None, 1536)          0          dropout_2[0][0]                   
+> dense_1 (Dense)                 (None, 32)            49184       flatten_1[0][0]                  
+> 
+> dense_2 (Dense)                  (None, 12)            396         dense_1[0][0]
+> 
+> dense_3 (Dense)                  (None, 1)             13          dense_2[0][0]                    
+> 
+> Total params: 64,511 Trainable params: 64,511 Non-trainable params: 0
 
 
-HYPERPARAMETERS, LEARNING AND VALIDATION
+**HYPERPARAMETERS, LEARNING AND VALIDATION**
 
 The Adam optimizer with default Keras setup is used to minimize Mean Squared Error (MSE) of the steering angle.
 The Mean Absolute Error (MAE) on the validation set is used as performance metric.
@@ -131,17 +122,16 @@ After 20 training epochs, each with 10,000 randomly augmented examples in batche
 
 Data augmentation and training are run in a g2.2xlarge AWS instance and take a total of 180 seconds. Inference is run on a Windows PC without discrete GPU.
 
-
-TEST DRIVE
+**TEST DRIVE**
 
 The model can flawlessly complete both the training track (on which its training has been based) and the test track (which it has not seen before), with relatively smooth steering controls. Moreover, it promptly corrects steering disturbances introduced by a human driver in manual mode.
 
 Videos of self-driving system driving the car in the simulator are available here:
+
   - Training track: https://youtu.be/OFk238xUg_M?list=PLvg9aKbXN2a0Zp8rEsot_BcIgq5Gz6mB5.
   - Test track: https://youtu.be/O93oTM8DL1I?list=PLvg9aKbXN2a0Zp8rEsot_BcIgq5Gz6mB5.
 
-
-LESSONS LEARNT
+**LESSONS LEARNT**
 
 The big takeaway from this challenge is that DATA IS KING.
 
@@ -155,8 +145,7 @@ It was only after smart data agumentation techniques that the model was able to 
 
 As a final caveat: I tested models trained on different augmented datasets before finding data augmentation techniques powerful enough to have the model safely complete the test track. In doing so, some information from the test circuit leaked to the model. To the extent that data augmentation decisions where based on performance on the test circuit, model performance on the test circuit cannot be completely relied upon. In other words, flawless performance of the model in a third never-seen-circuit cannot be counted on.
 
-
-ACKNOWLEDGEMENTS
+**ACKNOWLEDGEMENTS**
 
   - The idea of horizontal shearing was taken from Kaspar Sakmann, https://medium.com/@ksakmann/behavioral-cloning-make-a-car-drive-like-yourself-dc6021152713#.lvn2kq3ze.
   - The idea of introducing random shadows was taken from Vivek Yadav, https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9#.cyehlucpj.
